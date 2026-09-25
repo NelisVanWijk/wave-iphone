@@ -14,7 +14,7 @@ const files = new Map([
   ...['icon.svg', 'cover.svg'].map(n => [`/${n}`, [n, 'image/svg+xml']]),
   ...['icon-192.png', 'icon-512.png', 'apple-touch-icon.png'].map(n => [`/${n}`, [n, 'image/png']]),
 ]);
-const proxyPaths = /^(?:\/api\/(?:now-playing|state|cover\/[A-Za-z0-9_%.-]+)|\/stream\.(?:flac|mp3))$/;
+const proxyPaths = /^(?:\/api\/(?:now-playing|state|cover\/[A-Za-z0-9_%.-]+)|\/stream\.mp3)$/;
 
 export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwave:7700') {
   const base = new URL(upstream);

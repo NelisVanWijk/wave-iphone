@@ -1,6 +1,6 @@
 ﻿# WAVE voor iPhone
 
-Zelfstandige iPhone-webspeler voor [SUB/WAVE](https://github.com/perminder-klair/subwave). De originele container blijft onafhankelijk te updaten. FLAC is standaard; MP3 is een expliciete keuze in de instellingen.
+Zelfstandige iPhone-webspeler voor [SUB/WAVE](https://github.com/perminder-klair/subwave). De originele container blijft onafhankelijk te updaten. De speler gebruikt de MP3-radiostream.
 
 ## Installeren op Unraid
 
@@ -12,7 +12,7 @@ curl -fsSL https://raw.githubusercontent.com/NelisVanWijk/wave-iphone/main/templ
 
 Ga naar **Docker > Add Container** en selecteer de template **wave-iphone**. Vul bij **SUB/WAVE URL** het adres van je bestaande SUB/WAVE-server in, bijvoorbeeld `http://server-ip:7700`. Laat de spelerpoort op `7780` staan of kies een vrije hostpoort. Klik op Apply.
 
-Open `http://server-ip:7780` in Safari. Via Deel > Zet op beginscherm kun je de speler als webapp openen. Start audio met de afspeelknop. Er is geen Xcode nodig en geen appdata-map: instellingen voor audiokwaliteit worden op de telefoon bewaard.
+Open `http://server-ip:7780` in Safari. Via Deel > Zet op beginscherm kun je de speler als webapp openen. Start audio met de afspeelknop. Er is geen Xcode nodig en geen appdata-map: de speler bewaart geen servergegevens op schijf.
 
 Image: `ghcr.io/nelisvanwijk/wave-iphone:latest` (amd64 en arm64).
 
@@ -32,16 +32,17 @@ Heropen de webapp na een update. Ontwikkelaars moeten bij wijzigingen aan de gec
 
 ## Afspelen en achtergrondgedrag
 
-- Native HTML-audio met FLAC, albumhoezen, titel, artiest en recente nummers.
+- Native HTML-audio met MP3, albumhoezen, titel, artiest en recente nummers.
 - Media Session voor bediening en metadata op het vergrendelscherm.
 - Polling blijft aangevraagd tijdens afspelen, ook als de pagina verborgen is; de app haalt informatie opnieuw op bij terugkeer.
 - Metadata houdt rekening met de ingestelde SUB/WAVE-streambuffer.
 - AirPlay-knop als Safari de apparaatkiezer beschikbaar stelt.
+- Springacties worden uitgeschakeld bij initialisatie en opnieuw zodra audio speelt. iOS bepaalt uiteindelijk welke systeemknoppen zichtbaar zijn.
 - Pauzeren en hervatten verbindt opnieuw met de live-uitzending. Radio heeft geen skip- of terugspoelfunctie.
 
 **iOS kan JavaScript op de achtergrond opschorten. Deze PWA garandeert daarom geen titel- en hoesupdates bij een vergrendelde iPhone.** De app vermijdt het bewust stoppen van polling bij een verborgen pagina, maar kan de beperkingen van iOS niet opheffen. Fysieke iPhone-tests blijven nodig, met name op bètaversies.
 
-SUB/WAVE levert `/stream.flac` als FLAC in Ogg. Directe weergave is in de desktoptestbrowser gecontroleerd; iPhone-ondersteuning moet op het betreffende toestel worden getest. Bij een fout volgt een melding, geen automatische MP3-fallback. Een FLAC-stream maakt MP3-bronmateriaal niet lossless.
+FLAC is verwijderd: op de geteste iPhone werkte audio wel, maar ontbraken de systeemmediaknoppen. MP3 ondersteunt daar wel titel, hoes en nummerpositie.
 
 ## Lokaal ontwikkelen
 
@@ -62,7 +63,7 @@ node server.mjs
 
 Compose: stel `SUBWAVE_URL` in je omgeving of een lokale `.env` in en voer `docker compose up -d` uit. Zelf bouwen: `docker build -t wave-iphone:local .`.
 
-De server staat alleen de noodzakelijke leesroutes toe: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.flac`, `/stream.mp3`. Geen admin- of schrijf-API, buffering of transcoding.
+De server staat alleen de noodzakelijke leesroutes toe: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.mp3`. Geen admin- of schrijf-API, buffering of transcoding.
 
 ## Verificatie
 
@@ -71,4 +72,4 @@ npm test
 npm run check
 ```
 
-Tests controleren buffertiming, polling, aanvraagoverlap, herstel na fouten, proxybeperkingen en streamdisconnects. Controleer op een echte iPhone nog FLAC-weergave, minstens drie nummerwissels bij vergrendeling, energiebesparing, pauzeren/hervatten vanaf het vergrendelscherm, AirPlay en netwerkherstel.
+Tests controleren buffertiming, polling, aanvraagoverlap, herstel na fouten, proxybeperkingen en streamdisconnects. Controleer op een echte iPhone nog MP3-weergave, minstens drie nummerwissels bij vergrendeling, energiebesparing, pauzeren/hervatten vanaf het vergrendelscherm, AirPlay en netwerkherstel.

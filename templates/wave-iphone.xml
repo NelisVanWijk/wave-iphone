@@ -8,7 +8,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/NelisVanWijk/wave-iphone/issues</Support>
   <Project>https://github.com/NelisVanWijk/wave-iphone</Project>
-  <Overview>Independent iPhone web player for SUB/WAVE with FLAC, artwork and Media Session controls. Set SUBWAVE_URL to your existing SUB/WAVE server. iOS background metadata updates remain subject to browser suspension.</Overview>
+  <Overview>Independent iPhone web player for SUB/WAVE with MP3, artwork and Media Session controls. Set SUBWAVE_URL to your existing SUB/WAVE server. iOS background metadata updates remain subject to browser suspension.</Overview>
   <Category>MediaApp:Music</Category>
   <WebUI>http://[IP]:[PORT:7780]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/NelisVanWijk/wave-iphone/main/templates/wave-iphone.xml</TemplateURL>

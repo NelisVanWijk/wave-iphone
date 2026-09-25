@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="WAVE">
-  <meta name="description" content="Jouw SUB/WAVE-radio. Een eigen speler voor iPhone, met FLAC en actuele nummerinformatie.">
+  <meta name="description" content="Jouw SUB/WAVE-radio. Een eigen speler voor iPhone, met MP3 en actuele nummerinformatie.">
   <title>WAVE — jouw radio</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -32,7 +32,7 @@
   <section class="now-playing" aria-label="Nu op de radio">
     <div class="station-line"><span class="live-mark"><span></span> LIVE RADIO</span><span id="station-name">SUB/WAVE</span></div>
     <div class="artwork-wrap"><img id="artwork" class="artwork" src="/cover.svg" width="600" height="600" alt="Albumhoes"><div class="artwork-shine" aria-hidden="true"></div></div>
-    <div class="track-heading"><div class="track-copy"><h1 id="title">Even afstemmen</h1><p id="artist">De radio wordt opgehaald…</p></div><button id="quality-button" class="quality" aria-label="Audiokwaliteit kiezen"><svg><use href="#i-wave"/></svg><span id="quality-label">FLAC</span></button></div>
+    <div class="track-heading"><div class="track-copy"><h1 id="title">Even afstemmen</h1><p id="artist">De radio wordt opgehaald…</p></div><span class="quality" aria-label="MP3 radiostream"><svg><use href="#i-wave"/></svg><span id="quality-label">MP3</span></span></div>
     <p id="album" class="album">Jouw eigen frequentie</p>
     <div class="timeline" aria-hidden="true"><progress id="progress" value="0" max="1"></progress><div class="time-labels"><span id="elapsed">LIVE</span><span id="duration">—</span></div></div>
     <div class="transport"><button id="airplay" class="icon-button" aria-label="AirPlay kiezen" hidden><svg><use href="#i-airplay"/></svg></button><span id="transport-spacer" class="transport-spacer"></span><button id="play" class="play-button" aria-label="Radio afspelen"><svg><use id="play-symbol" href="#i-play"/></svg></button><button id="history-button" class="icon-button" aria-label="Recent afgespeeld bekijken"><svg><use href="#i-history"/></svg></button></div>
@@ -43,12 +43,11 @@
   <footer><svg><use href="#i-wave"/></svg><span>Jouw muziek. Eén frequentie.</span><span class="footer-brand">SUB/WAVE</span></footer>
 </main>
 <dialog id="settings"><div class="sheet-header"><div><span class="eyebrow">JOUW SPELER</span><h2>Afstemmen</h2></div><button id="close-settings" class="icon-button" aria-label="Sluiten"><svg><use href="#i-close"/></svg></button></div>
-  <fieldset><legend>Audiokwaliteit</legend><label class="quality-option"><input type="radio" name="format" value="flac" checked><span><strong>FLAC <small>VOORKEUR</small></strong><span>Lossless radiostream · meer dataverbruik</span></span></label><label class="quality-option"><input type="radio" name="format" value="mp3"><span><strong>MP3</strong><span>Minder data · brede ondersteuning</span></span></label></fieldset>
-  <p class="sheet-note">De kwaliteit wisselt alleen als jij daarvoor kiest. Een wijziging tijdens het luisteren stemt opnieuw af op de live-uitzending.</p>
+  <p class="sheet-note">Je luistert naar de live MP3-radiostream. Pauzeren en hervatten brengt je terug naar de live-uitzending.</p>
   <div class="install-note"><h3>Op je beginscherm</h3><p>Open deze pagina in Safari. Tik op Deel en kies ‘Zet op beginscherm’.</p></div>
   <p id="connection-info" class="connection-info">Verbonden via jouw SUB/WAVE-server</p>
   <button id="refresh-metadata" class="secondary-button">Nummerinformatie vernieuwen</button>
-  <p class="version">WAVE voor iPhone · 1.0.1</p>
+  <p class="version">WAVE voor iPhone · 1.0.2</p>
 </dialog>
 <audio id="audio" preload="none" playsinline x-webkit-airplay="allow"></audio>
 </body></html>

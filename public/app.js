@@ -3,8 +3,7 @@ import { FeedPoller, identity, audibleTime, trackPosition } from './player.js';
 const $ = id => document.getElementById(id);
 const audio = $('audio');
 const settings = $('settings');
-let format = 'flac';
-try { if (localStorage.getItem('wave-format') === 'mp3') format = 'mp3'; } catch { /* Private browsing. */ }
+const format = 'mp3';
 let wantsPlayback = false;
 let retryCount = 0;
 let retryTimer;
@@ -16,7 +15,6 @@ let lastState = null;
 let lastSuccess = 0;
 let feedFailed = false;
 let streamOnline = null;
-let streamConfig = null;
 let generation = 0;
 let artworkKey = '';
 let metadataKey = '';
@@ -42,7 +40,6 @@ function updateTransport() {
   $('play-symbol').setAttribute('href', wantsPlayback ? '#i-pause' : '#i-play');
   $('play').setAttribute('aria-label', wantsPlayback ? 'Radio pauzeren' : 'Radio afspelen');
   $('quality-label').textContent = format.toUpperCase();
-  document.querySelector(`input[value="${format}"]`).checked = true;
 }
 function setMetadata(force = false) {
   if (!('mediaSession' in navigator)) return;
@@ -139,7 +136,6 @@ async function poll(signal) {
     if (!Object.hasOwn(response, 'nowPlaying')) throw new Error('Unexpected station response');
     lastSuccess = Date.now(); feedFailed = false;
     streamOnline = response.streamOnline;
-    streamConfig = response.stream;
     $('station-name').textContent = response.dj?.station || 'SUB/WAVE';
     $('connection-info').textContent = `Nummerinformatie bijgewerkt om ${new Date(lastSuccess).toLocaleTimeString('nl-NL')}`;
     const state = await statePromise;
@@ -196,13 +192,11 @@ function startPlayback(retrying = false) {
   const result = audio.play();
   connectTimer = setTimeout(() => {
     if (thisGeneration !== generation || !wantsPlayback) return;
-    failPlayback(format === 'flac'
-      ? 'FLAC start niet op dit apparaat. Probeer opnieuw, of kies zelf MP3 bij Afstemmen.'
-      : 'De stream start niet. Controleer de verbinding en probeer opnieuw.');
+    failPlayback('De stream start niet. Controleer de verbinding en probeer opnieuw.');
   }, 20000);
   result?.catch(error => {
     if (thisGeneration !== generation || !wantsPlayback) return;
-    if (error.name === 'NotSupportedError') failPlayback(`Deze browser kan de ${format.toUpperCase()}-stream niet afspelen.${format === 'flac' ? ' Je kunt zelf MP3 kiezen bij Afstemmen.' : ''}`);
+    if (error.name === 'NotSupportedError') failPlayback('Deze browser kan de MP3-stream niet afspelen.');
     else if (error.name === 'NotAllowedError') failPlayback('Tik opnieuw op afspelen om de radio te starten.');
     else if (error.name !== 'AbortError') reconnect();
   });
@@ -212,8 +206,8 @@ $('play').addEventListener('click', () => wantsPlayback ? stopPlayback() : start
 audio.addEventListener('playing', () => {
   if (!wantsPlayback) return;
   cancelTimers(); retryCount = 0;
-  status(format === 'flac' ? 'FLAC · live verbonden' : 'MP3 · live verbonden');
-  notice(); setMetadata(true); refresh(true);
+  status('MP3 · live verbonden');
+  notice(); setMetadata(true); configureRadioControls(); refresh(true);
 });
 audio.addEventListener('pause', () => {
   // Native interruption: don't fight the user's headset or another audio app.
@@ -232,16 +226,21 @@ audio.addEventListener('stalled', () => {
 audio.addEventListener('ended', reconnect);
 audio.addEventListener('error', () => {
   if (!wantsPlayback) return;
-  if ([3, 4].includes(audio.error?.code)) failPlayback(`${format.toUpperCase()} wordt niet goed afgespeeld. Probeer opnieuw${format === 'flac' ? ', of kies zelf MP3 bij Afstemmen' : ''}.`);
+  if ([3, 4].includes(audio.error?.code)) failPlayback('MP3 wordt niet goed afgespeeld. Probeer opnieuw.');
   else reconnect();
 });
 audio.addEventListener('timeupdate', () => { updateSystemPosition(); refresh(); });
-if ('mediaSession' in navigator) {
+function configureRadioControls() {
+  // Reapply after playback starts: the browser can install its own transport
+  // controls when the media element becomes active. Keep track time separate.
+  if (!('mediaSession' in navigator)) return;
   for (const [action, handler] of Object.entries({ play: () => startPlayback(), pause: stopPlayback, stop: stopPlayback,
     seekbackward: null, seekforward: null, seekto: null, previoustrack: null, nexttrack: null })) {
     try { navigator.mediaSession.setActionHandler(action, handler); } catch { /* Not all actions exist on every iOS. */ }
   }
 }
+configureRadioControls();
+
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(true); updateProgress(); } });
 window.addEventListener('pageshow', () => refresh(true));
 window.addEventListener('online', () => { refresh(true); if (wantsPlayback && audio.readyState < 3) reconnect(); });
@@ -255,21 +254,11 @@ setInterval(() => {
 
 function openSettings() { settings.showModal(); }
 $('settings-button').addEventListener('click', openSettings);
-$('quality-button').addEventListener('click', openSettings);
 $('close-settings').addEventListener('click', () => settings.close());
 settings.addEventListener('click', event => { if (event.target === settings) {
   const bounds = settings.getBoundingClientRect();
   if (event.clientY < bounds.top || event.clientX < bounds.left || event.clientX > bounds.right) settings.close();
 } });
-document.querySelectorAll('input[name="format"]').forEach(input => input.addEventListener('change', () => {
-  const wasPlaying = wantsPlayback;
-  if (wasPlaying) stopPlayback();
-  format = input.value;
-  try { localStorage.setItem('wave-format', format); } catch { /* Best effort. */ }
-  updateTransport(); notice();
-  if (format === 'flac' && streamConfig?.flacEnabled === false) notice('FLAC staat uit op de zender. Schakel de FLAC-stream in bij SUB/WAVE.');
-  if (wasPlaying) startPlayback();
-}));
 $('refresh-metadata').addEventListener('click', () => refresh(true));
 $('history-button').addEventListener('click', () => $('recent').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }));
 if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
