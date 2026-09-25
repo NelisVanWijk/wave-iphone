@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>wave-iphone</Name>
+  <Repository>ghcr.io/nelisvanwijk/wave-iphone:latest</Repository>
+  <Registry>https://github.com/NelisVanWijk/wave-iphone/pkgs/container/wave-iphone</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/NelisVanWijk/wave-iphone/issues</Support>
+  <Project>https://github.com/NelisVanWijk/wave-iphone</Project>
+  <Overview>Independent iPhone web player for SUB/WAVE with FLAC, artwork and Media Session controls. Set SUBWAVE_URL to your existing SUB/WAVE server. iOS background metadata updates remain subject to browser suspension.</Overview>
+  <Category>MediaApp:Music</Category>
+  <WebUI>http://[IP]:[PORT:7780]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/NelisVanWijk/wave-iphone/main/templates/wave-iphone.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/NelisVanWijk/wave-iphone/main/public/icon-192.png</Icon>
+  <ExtraParams>--read-only --cap-drop=ALL --security-opt=no-new-privileges:true --log-opt=max-size=5m --log-opt=max-file=2</ExtraParams>
+  <Config Name="Web interface" Target="7780" Default="7780" Mode="tcp" Description="Port for the iPhone player" Type="Port" Display="always" Required="true" Mask="false">7780</Config>
+  <Config Name="SUB/WAVE URL" Target="SUBWAVE_URL" Default="" Mode="" Description="Base URL reachable from this container, for example http://server-ip:7700 or https://radio.example.com (without /api or credentials). Change this when your upstream address changes." Type="Variable" Display="always" Required="true" Mask="false"></Config>
+</Container>

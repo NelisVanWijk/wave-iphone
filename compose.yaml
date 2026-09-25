@@ -1,0 +1,17 @@
+services:
+  wave-iphone:
+    image: ghcr.io/nelisvanwijk/wave-iphone:latest
+    container_name: wave-iphone
+    restart: unless-stopped
+    ports:
+      - "7780:7780"
+    environment:
+      SUBWAVE_URL: "${SUBWAVE_URL:?Set SUBWAVE_URL to your SUB/WAVE server URL}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"

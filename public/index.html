@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151719">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WAVE">
+  <meta name="description" content="Jouw SUB/WAVE-radio. Een eigen speler voor iPhone, met FLAC en actuele nummerinformatie.">
+  <title>WAVE — jouw radio</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+<svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7zm7 0h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-airplay" viewBox="0 0 24 24"><path d="M5 16H3V4h18v12h-2M12 13l7 8H5Z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 10v4m4-8v12m5-16v20m5-16v12m4-8v4"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 1 7M3 4v6h6m3-4v6l4 2"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+</defs></svg>
+<div class="ambient" aria-hidden="true"></div>
+<main class="player-shell">
+  <header class="topbar"><a class="wordmark" href="/" aria-label="WAVE home">WAVE<span class="brand-dot">/</span></a><button id="settings-button" class="icon-button" aria-label="Instellingen"><svg><use href="#i-settings"/></svg></button></header>
+  <section class="now-playing" aria-label="Nu op de radio">
+    <div class="station-line"><span class="live-mark"><span></span> LIVE RADIO</span><span id="station-name">SUB/WAVE</span></div>
+    <div class="artwork-wrap"><img id="artwork" class="artwork" src="/cover.svg" width="600" height="600" alt="Albumhoes"><div class="artwork-shine" aria-hidden="true"></div></div>
+    <div class="track-heading"><div class="track-copy"><h1 id="title">Even afstemmen</h1><p id="artist">De radio wordt opgehaald…</p></div><button id="quality-button" class="quality" aria-label="Audiokwaliteit kiezen"><svg><use href="#i-wave"/></svg><span id="quality-label">FLAC</span></button></div>
+    <p id="album" class="album">Jouw eigen frequentie</p>
+    <div class="timeline" aria-hidden="true"><progress id="progress" value="0" max="1"></progress><div class="time-labels"><span id="elapsed">LIVE</span><span id="duration">—</span></div></div>
+    <div class="transport"><button id="airplay" class="icon-button" aria-label="AirPlay kiezen" hidden><svg><use href="#i-airplay"/></svg></button><span id="transport-spacer" class="transport-spacer"></span><button id="play" class="play-button" aria-label="Radio afspelen"><svg><use id="play-symbol" href="#i-play"/></svg></button><button id="history-button" class="icon-button" aria-label="Recent afgespeeld bekijken"><svg><use href="#i-history"/></svg></button></div>
+    <p id="playback-status" class="playback-status" role="status">Klaar om te luisteren</p>
+    <p id="notice" class="notice" role="status" hidden></p>
+  </section>
+  <section id="recent" class="recent" aria-labelledby="recent-title"><div class="section-title"><h2 id="recent-title">Net gedraaid</h2><span>OP DEZE ZENDER</span></div><div id="history-list"><p class="empty">De laatste nummers verschijnen hier.</p></div></section>
+  <footer><svg><use href="#i-wave"/></svg><span>Jouw muziek. Eén frequentie.</span><span class="footer-brand">SUB/WAVE</span></footer>
+</main>
+<dialog id="settings"><div class="sheet-header"><div><span class="eyebrow">JOUW SPELER</span><h2>Afstemmen</h2></div><button id="close-settings" class="icon-button" aria-label="Sluiten"><svg><use href="#i-close"/></svg></button></div>
+  <fieldset><legend>Audiokwaliteit</legend><label class="quality-option"><input type="radio" name="format" value="flac" checked><span><strong>FLAC <small>VOORKEUR</small></strong><span>Lossless radiostream · meer dataverbruik</span></span></label><label class="quality-option"><input type="radio" name="format" value="mp3"><span><strong>MP3</strong><span>Minder data · brede ondersteuning</span></span></label></fieldset>
+  <p class="sheet-note">De kwaliteit wisselt alleen als jij daarvoor kiest. Een wijziging tijdens het luisteren stemt opnieuw af op de live-uitzending.</p>
+  <div class="install-note"><h3>Op je beginscherm</h3><p>Open deze pagina in Safari. Tik op Deel en kies ‘Zet op beginscherm’.</p></div>
+  <p id="connection-info" class="connection-info">Verbonden via jouw SUB/WAVE-server</p>
+  <button id="refresh-metadata" class="secondary-button">Nummerinformatie vernieuwen</button>
+  <p class="version">WAVE voor iPhone · 1.0.0</p>
+</dialog>
+<audio id="audio" preload="none" playsinline x-webkit-airplay="allow"></audio>
+</body></html>
