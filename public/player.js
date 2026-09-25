@@ -2,6 +2,14 @@ export function identity(track) {
   return track ? `${track.subsonic_id || ''}|${track.title || ''}|${track.artist || ''}` : '';
 }
 
+// Radio media time measures the connection, not the song. Use the station's
+// buffered start time for both the UI and the system media controls.
+export function trackPosition(track, startedAt, now = Date.now()) {
+  const duration = Number(track?.duration);
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(startedAt) || startedAt <= 0) return null;
+  return { duration, position: Math.min(duration, Math.max(0, (now - startedAt) / 1000)), playbackRate: 1 };
+}
+
 export function audibleTime(track, state, bufferSeconds, now = Date.now()) {
   const current = state?.current;
   if (!track || !current || (track.subsonic_id && current.subsonic_id

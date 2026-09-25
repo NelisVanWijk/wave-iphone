@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FeedPoller, audibleTime, identity } from '../public/player.js';
+import { FeedPoller, audibleTime, identity, trackPosition } from '../public/player.js';
+
+test('joining radio mid-song publishes song position rather than connection time', () => {
+  const start = Date.parse('2026-09-25T12:00:00Z');
+  const track = { duration: 240 };
+  assert.deepEqual(trackPosition(track, start, start + 93000), { duration: 240, position: 93, playbackRate: 1 });
+  assert.equal(trackPosition(track, start, start - 22000).position, 0);
+  assert.equal(trackPosition(track, start, start + 300000).position, 240);
+  assert.equal(trackPosition({ duration: Infinity }, start), null);
+  assert.equal(trackPosition({ duration: 0 }, start), null);
+  assert.equal(trackPosition(track, NaN), null);
+  assert.equal(trackPosition(null, start), null);
+});
 
 test('track timing follows the matching ID and advertised buffer, not fetch time', () => {
   const now = Date.parse('2026-09-25T12:00:10Z');

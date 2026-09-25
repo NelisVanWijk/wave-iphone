@@ -1,4 +1,4 @@
-import { FeedPoller, identity, audibleTime } from './player.js';
+import { FeedPoller, identity, audibleTime, trackPosition } from './player.js';
 
 const $ = id => document.getElementById(id);
 const audio = $('audio');
@@ -21,6 +21,20 @@ let generation = 0;
 let artworkKey = '';
 let metadataKey = '';
 let historyKey = '';
+let positionUpdatedAt = 0;
+
+function updateSystemPosition(force = false) {
+  const session = navigator.mediaSession;
+  if (typeof session?.setPositionState !== 'function') return;
+  const now = Date.now();
+  if (!force && (audio.paused || now - positionUpdatedAt < 1000)) return;
+  try {
+    const position = trackPosition(currentTrack, startedAt, now);
+    // Never publish the Icecast connection's duration/currentTime as song time.
+    session.setPositionState(position || undefined);
+    positionUpdatedAt = now;
+  } catch { /* Older browsers may expose but not implement position state. */ }
+}
 
 function notice(message = '') { $('notice').textContent = message; $('notice').hidden = !message; }
 function status(message) { $('playback-status').textContent = message; }
@@ -30,20 +44,21 @@ function updateTransport() {
   $('quality-label').textContent = format.toUpperCase();
   document.querySelector(`input[value="${format}"]`).checked = true;
 }
-function setMetadata() {
+function setMetadata(force = false) {
   if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.playbackState = !audio.paused ? 'playing' : 'paused';
+  updateSystemPosition(true);
   if (!currentTrack || !('MediaMetadata' in window)) return;
   const artwork = currentTrack.subsonic_id
     ? new URL(`/api/cover/${encodeURIComponent(currentTrack.subsonic_id)}`, location.origin).href
     : new URL('/icon-512.png', location.origin).href;
   const nextKey = JSON.stringify([identity(currentTrack), currentTrack.album, artwork]);
-  if (metadataKey === nextKey) return;
-  metadataKey = nextKey;
+  if (!force && metadataKey === nextKey) return;
   navigator.mediaSession.metadata = new MediaMetadata({
     title: currentTrack.title || 'SUB/WAVE', artist: currentTrack.artist || 'Live radio',
     album: currentTrack.album || 'SUB/WAVE', artwork: [{ src: artwork, sizes: '512x512' }],
   });
+  metadataKey = nextKey;
 }
 function time(seconds) {
   if (!Number.isFinite(seconds)) return '—';
@@ -51,11 +66,11 @@ function time(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 function updateProgress() {
-  const duration = Number(currentTrack?.duration);
-  if (!startedAt || !Number.isFinite(duration) || duration <= 0) {
+  const position = trackPosition(currentTrack, startedAt);
+  if (!position) {
     $('elapsed').textContent = 'LIVE'; $('duration').textContent = '—'; $('progress').value = 0; return;
   }
-  const elapsed = Math.min(duration, Math.max(0, (Date.now() - startedAt) / 1000));
+  const { duration, position: elapsed } = position;
   $('elapsed').textContent = time(elapsed); $('duration').textContent = `−${time(duration - elapsed)}`;
   $('progress').value = elapsed / duration;
 }
@@ -198,7 +213,7 @@ audio.addEventListener('playing', () => {
   if (!wantsPlayback) return;
   cancelTimers(); retryCount = 0;
   status(format === 'flac' ? 'FLAC · live verbonden' : 'MP3 · live verbonden');
-  notice(); setMetadata(); refresh(true);
+  notice(); setMetadata(true); refresh(true);
 });
 audio.addEventListener('pause', () => {
   // Native interruption: don't fight the user's headset or another audio app.
@@ -220,7 +235,7 @@ audio.addEventListener('error', () => {
   if ([3, 4].includes(audio.error?.code)) failPlayback(`${format.toUpperCase()} wordt niet goed afgespeeld. Probeer opnieuw${format === 'flac' ? ', of kies zelf MP3 bij Afstemmen' : ''}.`);
   else reconnect();
 });
-audio.addEventListener('timeupdate', () => refresh());
+audio.addEventListener('timeupdate', () => { updateSystemPosition(); refresh(); });
 if ('mediaSession' in navigator) {
   for (const [action, handler] of Object.entries({ play: () => startPlayback(), pause: stopPlayback, stop: stopPlayback,
     seekbackward: null, seekforward: null, seekto: null, previoustrack: null, nexttrack: null })) {
@@ -233,6 +248,7 @@ window.addEventListener('online', () => { refresh(true); if (wantsPlayback && au
 window.addEventListener('offline', () => { if (wantsPlayback) status('Verbinding weg · we proberen te herstellen'); });
 setInterval(() => {
   refresh();
+  updateSystemPosition();
   if (!document.hidden) updateProgress();
   if (feedFailed && lastSuccess && Date.now() - lastSuccess > 20000) $('connection-info').textContent = 'Titel en hoes zijn mogelijk verouderd';
 }, 1000);
