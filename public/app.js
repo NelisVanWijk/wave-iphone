@@ -263,18 +263,20 @@ settings.addEventListener('click', event => { if (event.target === settings) {
 $('refresh-metadata').addEventListener('click', () => refresh(true));
 $('history-button').addEventListener('click', () => $('recent').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }));
 const requestForm = $('request-form');
+const requestName = $('request-name');
 const requestInput = $('request-input');
 const requestStatus = $('request-status');
 const requestButton = requestForm.querySelector('button');
 requestForm.addEventListener('submit', async event => {
   event.preventDefault();
   const request = requestInput.value.trim();
-  if (!request) return;
+  const name = requestName.value.trim();
+  if (!request || !name) return;
   const resumeAfterRequest = wantsPlayback && !audio.paused;
   requestButton.disabled = true;
   requestStatus.textContent = 'Verzoek wordt naar de dj gestuurd…';
   try {
-    const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: request }) });
+    const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: request, name }) });
     const body = await response.json().catch(() => ({}));
     if (response.status === 429) throw new Error(body.error || 'Je kunt over een moment opnieuw een verzoek doen.');
     if (!response.ok) throw new Error(body.error || 'Het verzoek kon niet worden verstuurd.');
@@ -288,7 +290,8 @@ requestForm.addEventListener('submit', async event => {
       if (!statusResponse.ok) throw new Error(result.message || result.error || 'De aanvraagstatus kon niet worden opgehaald.');
       if (result.status === 'resolved') {
         const track = result.track?.title ? ` ${result.track.title}${result.track.artist ? ` — ${result.track.artist}` : ''}` : '';
-        requestStatus.textContent = `Ingepland na het huidige nummer.${track}`; break;
+        const ack = result.ack ? ` De dj zegt: “${result.ack}”` : '';
+        requestStatus.textContent = `Ingepland na het huidige nummer.${track}${ack}`; break;
       }
       if (['rejected', 'failed', 'unknown'].includes(result.status)) throw new Error(result.message || 'De AI-dj kon dit verzoek niet inplannen.');
       if (attempt === 22) requestStatus.textContent = 'Verzoek staat nog open. De dj werkt het verder af.';

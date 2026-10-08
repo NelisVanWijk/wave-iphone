@@ -65,6 +65,9 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
       const target = new URL(url.pathname, base);
       const headers = { Accept: req.headers.accept || '*/*', 'Accept-Encoding': 'identity' };
       if (req.headers.range) headers.Range = req.headers.range;
+      if (req.headers['x-forwarded-for']) headers['X-Forwarded-For'] = req.headers['x-forwarded-for'];
+      else if (req.headers['x-real-ip']) headers['X-Forwarded-For'] = req.headers['x-real-ip'];
+      if (req.headers['x-real-ip']) headers['X-Real-IP'] = req.headers['x-real-ip'];
       let body;
       if (req.method === 'POST') {
         const chunks = [];
@@ -73,8 +76,10 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
         try {
           const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
           const text = typeof parsed.text === 'string' ? parsed.text : parsed.request;
+          const name = typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : 'WAVE luisteraar';
           if (typeof text !== 'string' || !text.trim() || text.length > 240) throw new Error();
-          body = JSON.stringify({ text: text.trim(), name: 'WAVE luisteraar' });
+          if (!name || name.length > 40) throw new Error();
+          body = JSON.stringify({ text: text.trim(), name });
         } catch { res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"Ongeldig verzoek"}'); return; }
         headers['Content-Type'] = 'application/json'; headers['Content-Length'] = Buffer.byteLength(body);
       }
@@ -85,9 +90,9 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
       }, upstreamRes => {
         clearTimeout(headerTimeout);
         const forwarded = { 'Cache-Control': !auth && url.pathname.startsWith('/api/cover/') && upstreamRes.statusCode === 200 ? 'private, max-age=3600' : 'no-store', 'X-Accel-Buffering': 'no' };
-        for (const key of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
-          if (upstreamRes.headers[key]) forwarded[key] = upstreamRes.headers[key];
-        }
+      for (const key of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'retry-after']) {
+        if (upstreamRes.headers[key]) forwarded[key] = upstreamRes.headers[key];
+      }
         res.writeHead(upstreamRes.statusCode || 502, forwarded);
         upstreamRes.on('error', () => res.destroy());
         upstreamRes.pipe(res);

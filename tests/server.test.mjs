@@ -57,11 +57,11 @@ test('forwards a bounded listener request to the public SUB/WAVE request API', a
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); upstream.closeAllConnections(); server.close(); upstream.close(); });
   const base = `http://127.0.0.1:${server.address().port}`;
-  const response = await fetch(`${base}/api/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'iets van Radiohead', ignored: 'nooit doorsturen' }) });
+  const response = await fetch(`${base}/api/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'iets van Radiohead', name: 'Niels', ignored: 'nooit doorsturen' }) });
   assert.equal(response.status, 202);
-  assert.deepEqual(received, { text: 'iets van Radiohead', name: 'WAVE luisteraar' });
+  assert.deepEqual(received, { text: 'iets van Radiohead', name: 'Niels' });
   assert.equal((await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ text: '' }) })).status, 400);
-  const legacy = await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ request: 'oude app' }) });
+  const legacy = await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ request: 'oude app', name: 'Oude app' }) });
   assert.equal(legacy.status, 202);
-  assert.deepEqual(received, { text: 'oude app', name: 'WAVE luisteraar' });
+  assert.deepEqual(received, { text: 'oude app', name: 'Oude app' });
 });
