@@ -262,6 +262,29 @@ settings.addEventListener('click', event => { if (event.target === settings) {
 } });
 $('refresh-metadata').addEventListener('click', () => refresh(true));
 $('history-button').addEventListener('click', () => $('recent').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }));
+const requestForm = $('request-form');
+const requestInput = $('request-input');
+const requestStatus = $('request-status');
+const requestButton = requestForm.querySelector('button');
+requestForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const request = requestInput.value.trim();
+  if (!request) return;
+  requestButton.disabled = true;
+  requestStatus.textContent = 'Verzoek wordt naar de dj gestuurd…';
+  try {
+    const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request }) });
+    const body = await response.json().catch(() => ({}));
+    if (response.status === 429) throw new Error(body.error || 'Je kunt over een moment opnieuw een verzoek doen.');
+    if (!response.ok) throw new Error(body.error || 'Het verzoek kon niet worden verstuurd.');
+    requestInput.value = '';
+    requestStatus.textContent = 'Verzoek ontvangen. De dj zet het na het huidige nummer klaar.';
+  } catch (error) {
+    requestStatus.textContent = error.message || 'Het verzoek kon niet worden verstuurd.';
+  } finally {
+    requestButton.disabled = false;
+  }
+});
 if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
   $('airplay').hidden = false; $('transport-spacer').hidden = true;
   $('airplay').addEventListener('click', () => audio.webkitShowPlaybackTargetPicker());

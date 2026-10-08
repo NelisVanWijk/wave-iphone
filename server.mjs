@@ -18,6 +18,7 @@ const files = new Map([
   ...['icon-192.png', 'icon-512.png', 'apple-touch-icon.png'].map(n => [`/${n}`, [n, 'image/png']]),
 ]);
 const proxyPaths = /^(?:\/api\/(?:now-playing|state|cover\/[A-Za-z0-9_%.-]+)|\/stream\.mp3)$/;
+const requestPath = /^\/api\/request(?:\/[A-Za-z0-9_-]+)?$/;
 
 export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwave:7700', authOptions) {
   const auth = createAuth(authOptions);
@@ -45,7 +46,11 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
     if (!auth && url.pathname === '/auth/status' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end('{"enabled":false}'); return;
     }
-    if (!['GET', 'HEAD'].includes(req.method)) {
+    const isRequest = requestPath.test(url.pathname);
+    if (isRequest && !['GET', 'POST'].includes(req.method)) {
+      res.writeHead(405, { Allow: 'GET, POST' }).end(); return;
+    }
+    if (!isRequest && !['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { Allow: 'GET, HEAD' }).end(); return;
     }
     const publicAsset = ['/login', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/sw.js'].includes(url.pathname);
@@ -55,11 +60,23 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
       else res.writeHead(401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end('{"error":"Log opnieuw in"}');
       return;
     }
-    if (proxyPaths.test(url.pathname)) {
+    if (proxyPaths.test(url.pathname) || isRequest) {
       // Only fixed read-only station paths; never an arbitrary URL proxy.
       const target = new URL(url.pathname, base);
       const headers = { Accept: req.headers.accept || '*/*', 'Accept-Encoding': 'identity' };
       if (req.headers.range) headers.Range = req.headers.range;
+      let body;
+      if (req.method === 'POST') {
+        const chunks = [];
+        let size = 0;
+        for await (const chunk of req) { size += chunk.length; if (size > 4096) { res.writeHead(413, { 'Content-Type': 'application/json' }).end('{"error":"Verzoek is te lang"}'); return; } chunks.push(chunk); }
+        try {
+          const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          if (typeof parsed.request !== 'string' || !parsed.request.trim() || parsed.request.length > 240) throw new Error();
+          body = JSON.stringify({ request: parsed.request.trim() });
+        } catch { res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"Ongeldig verzoek"}'); return; }
+        headers['Content-Type'] = 'application/json'; headers['Content-Length'] = Buffer.byteLength(body);
+      }
       const stream = url.pathname.startsWith('/stream.');
       if (auth && stream) auth.track(session, res);
       const upstreamReq = (target.protocol === 'https:' ? https : http).request(target, {
@@ -83,7 +100,7 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
       upstreamReq.setTimeout(stream ? 45000 : 12000, () => upstreamReq.destroy());
       upstreamReq.on('error', fail);
       res.on('close', () => { clearTimeout(headerTimeout); upstreamReq.destroy(); });
-      upstreamReq.end(); return;
+      upstreamReq.end(body); return;
     }
     const file = files.get(url.pathname);
     if (!file) { res.writeHead(404).end('Not found'); return; }

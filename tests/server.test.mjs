@@ -43,3 +43,22 @@ test('upstream failures produce a bounded, readable error', async t => {
   assert.equal(response.status, 502);
   assert.match((await response.json()).error, /niet bereikbaar/);
 });
+
+test('forwards a bounded listener request to the public SUB/WAVE request API', async t => {
+  let received;
+  const upstream = http.createServer((req, res) => {
+    if (req.url !== '/api/request' || req.method !== 'POST') { res.writeHead(404).end(); return; }
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => { received = JSON.parse(Buffer.concat(chunks).toString()); res.writeHead(202, { 'Content-Type': 'application/json' }).end('{"requestId":"abc"}'); });
+  });
+  upstream.listen(0, '127.0.0.1'); await once(upstream, 'listening');
+  const server = createServer(`http://127.0.0.1:${upstream.address().port}`);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.closeAllConnections(); upstream.closeAllConnections(); server.close(); upstream.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/api/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request: 'iets van Radiohead', ignored: 'nooit doorsturen' }) });
+  assert.equal(response.status, 202);
+  assert.deepEqual(received, { request: 'iets van Radiohead' });
+  assert.equal((await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ request: '' }) })).status, 400);
+});
