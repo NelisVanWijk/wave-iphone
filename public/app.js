@@ -278,7 +278,12 @@ requestForm.addEventListener('submit', async event => {
   try {
     const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: request, name }) });
     const body = await response.json().catch(() => ({}));
-    if (response.status === 429) throw new Error(body.error || 'Je kunt over een moment opnieuw een verzoek doen.');
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get('retry-after'));
+      throw new Error(Number.isFinite(retryAfter) && retryAfter > 0
+        ? `Je kunt over ${retryAfter} seconden opnieuw een verzoek doen.`
+        : (body.error || 'Je kunt over een moment opnieuw een verzoek doen.'));
+    }
     if (!response.ok) throw new Error(body.error || 'Het verzoek kon niet worden verstuurd.');
     requestInput.value = '';
     if (!body.requestId) { requestStatus.textContent = 'Verzoek ontvangen. De dj zet het na het huidige nummer klaar.'; return; }
