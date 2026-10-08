@@ -273,12 +273,25 @@ requestForm.addEventListener('submit', async event => {
   requestButton.disabled = true;
   requestStatus.textContent = 'Verzoek wordt naar de dj gestuurd…';
   try {
-    const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request }) });
+    const response = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: request }) });
     const body = await response.json().catch(() => ({}));
     if (response.status === 429) throw new Error(body.error || 'Je kunt over een moment opnieuw een verzoek doen.');
     if (!response.ok) throw new Error(body.error || 'Het verzoek kon niet worden verstuurd.');
     requestInput.value = '';
-    requestStatus.textContent = 'Verzoek ontvangen. De dj zet het na het huidige nummer klaar.';
+    if (!body.requestId) { requestStatus.textContent = 'Verzoek ontvangen. De dj zet het na het huidige nummer klaar.'; return; }
+    requestStatus.textContent = 'Verzoek ontvangen. De dj is het nummer aan het zoeken…';
+    for (let attempt = 0; attempt < 23; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const statusResponse = await fetch(`/api/request/${encodeURIComponent(body.requestId)}`, { cache: 'no-store' });
+      const result = await statusResponse.json().catch(() => ({}));
+      if (!statusResponse.ok) throw new Error(result.message || result.error || 'De aanvraagstatus kon niet worden opgehaald.');
+      if (result.status === 'resolved') {
+        const track = result.track?.title ? ` ${result.track.title}${result.track.artist ? ` — ${result.track.artist}` : ''}` : '';
+        requestStatus.textContent = `Ingepland na het huidige nummer.${track}`; break;
+      }
+      if (['rejected', 'failed', 'unknown'].includes(result.status)) throw new Error(result.message || 'De AI-dj kon dit verzoek niet inplannen.');
+      if (attempt === 22) requestStatus.textContent = 'Verzoek staat nog open. De dj werkt het verder af.';
+    }
   } catch (error) {
     requestStatus.textContent = error.message || 'Het verzoek kon niet worden verstuurd.';
   } finally {

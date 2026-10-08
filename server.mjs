@@ -72,8 +72,8 @@ export function createServer(upstream = process.env.SUBWAVE_URL || 'http://subwa
         for await (const chunk of req) { size += chunk.length; if (size > 4096) { res.writeHead(413, { 'Content-Type': 'application/json' }).end('{"error":"Verzoek is te lang"}'); return; } chunks.push(chunk); }
         try {
           const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-          if (typeof parsed.request !== 'string' || !parsed.request.trim() || parsed.request.length > 240) throw new Error();
-          body = JSON.stringify({ request: parsed.request.trim() });
+          if (typeof parsed.text !== 'string' || !parsed.text.trim() || parsed.text.length > 240) throw new Error();
+          body = JSON.stringify({ text: parsed.text.trim(), name: 'WAVE luisteraar' });
         } catch { res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"Ongeldig verzoek"}'); return; }
         headers['Content-Type'] = 'application/json'; headers['Content-Length'] = Buffer.byteLength(body);
       }
