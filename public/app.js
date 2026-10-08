@@ -270,6 +270,7 @@ requestForm.addEventListener('submit', async event => {
   event.preventDefault();
   const request = requestInput.value.trim();
   if (!request) return;
+  const resumeAfterRequest = wantsPlayback && !audio.paused;
   requestButton.disabled = true;
   requestStatus.textContent = 'Verzoek wordt naar de dj gestuurd…';
   try {
@@ -296,6 +297,9 @@ requestForm.addEventListener('submit', async event => {
     requestStatus.textContent = error.message || 'Het verzoek kon niet worden verstuurd.';
   } finally {
     requestButton.disabled = false;
+    // A browser may briefly interrupt a media element while submitting a
+    // form. Keep the radio playing if it was active before the request.
+    if (resumeAfterRequest && audio.paused) startPlayback();
   }
 });
 if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
