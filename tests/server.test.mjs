@@ -61,4 +61,7 @@ test('forwards a bounded listener request to the public SUB/WAVE request API', a
   assert.equal(response.status, 202);
   assert.deepEqual(received, { text: 'iets van Radiohead', name: 'WAVE luisteraar' });
   assert.equal((await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ text: '' }) })).status, 400);
+  const legacy = await fetch(`${base}/api/request`, { method: 'POST', body: JSON.stringify({ request: 'oude app' }) });
+  assert.equal(legacy.status, 202);
+  assert.deepEqual(received, { text: 'oude app', name: 'WAVE luisteraar' });
 });
