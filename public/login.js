@@ -2,6 +2,8 @@ const form = document.getElementById('login-form');
 const error = document.getElementById('login-error');
 const submit = document.getElementById('login-submit');
 const password = document.getElementById('password');
+submit.disabled = location.protocol !== 'https:';
+if (submit.disabled) error.textContent = 'Open WAVE via je beveiligde HTTPS-adres.';
 fetch('/auth/status', { cache: 'no-store' }).then(r => r.json()).then(status => {
   if (!status.enabled || status.authenticated) location.replace('/');
 }).catch(() => {});

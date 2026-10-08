@@ -15,10 +15,10 @@
   <a class="wordmark" href="/">WAVE<span class="brand-dot">/</span></a>
   <h1>Jouw radio, overal.</h1>
   <p class="sheet-note">Log in om te luisteren. Op dit apparaat blijf je maximaal 90 dagen ingelogd.</p>
-  <form id="login-form">
+  <form id="login-form" method="post" action="/auth/login">
     <label for="password">Wachtwoord</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="1024">
-    <button class="secondary-button" id="login-submit" type="submit">Inloggen</button>
+    <button class="secondary-button" id="login-submit" type="submit" disabled>Inloggen</button>
     <p id="login-error" role="alert"></p>
   </form>
 </main></body></html>
