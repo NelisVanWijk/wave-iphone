@@ -282,7 +282,7 @@ requestForm.addEventListener('submit', async event => {
       const retryAfter = Number(response.headers.get('retry-after'));
       throw new Error(Number.isFinite(retryAfter) && retryAfter > 0
         ? `Je kunt over ${retryAfter} seconden opnieuw een verzoek doen.`
-        : (body.error || 'Je kunt over een moment opnieuw een verzoek doen.'));
+        : (body.error || 'De aanvraaglimiet is bereikt. SUB/WAVE laat maximaal 8 verzoeken per uur per bron toe.'));
     }
     if (!response.ok) throw new Error(body.error || 'Het verzoek kon niet worden verstuurd.');
     requestInput.value = '';
