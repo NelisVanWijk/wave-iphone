@@ -17,6 +17,13 @@ jobs:
           node-version: '24'
       - run: npm run check
       - run: npm test
+      - name: Verify container auth storage as non-root
+        run: |
+          docker build -t wave-auth-test .
+          docker run --rm --read-only -v wave-auth-test:/data wave-auth-test node --input-type=module -e "import {createAuth,passwordHash} from './auth.mjs'; createAuth({enabled:'true', origin:'https://test.example', password:await passwordHash('container-smoke-test-only')}); console.log('Auth storage initialized');"
+      - name: Remove test volume
+        if: always()
+        run: docker volume rm wave-auth-test || true
   publish:
     if: github.event_name != 'pull_request'
     needs: test
@@ -26,6 +33,7 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:

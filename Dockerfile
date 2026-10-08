@@ -3,7 +3,8 @@ LABEL org.opencontainers.image.source="https://github.com/NelisVanWijk/wave-ipho
 LABEL org.opencontainers.image.description="Independent iPhone web player for SUB/WAVE"
 WORKDIR /app
 ENV NODE_ENV=production PORT=7780
-COPY --chown=node:node package.json server.mjs ./
+COPY --chown=node:node package.json server.mjs auth.mjs password-hash.mjs ./
+RUN mkdir /data && chown node:node /data
 COPY --chown=node:node public ./public
 USER node
 EXPOSE 7780

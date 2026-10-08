@@ -12,7 +12,7 @@ curl -fsSL https://raw.githubusercontent.com/NelisVanWijk/wave-iphone/main/templ
 
 Ga naar **Docker > Add Container** en selecteer de template **wave-iphone**. Vul bij **SUB/WAVE URL** het adres van je bestaande SUB/WAVE-server in, bijvoorbeeld `http://server-ip:7700`. Laat de spelerpoort op `7780` staan of kies een vrije hostpoort. Klik op Apply.
 
-Open `http://server-ip:7780` in Safari. Via Deel > Zet op beginscherm kun je de speler als webapp openen. Start audio met de afspeelknop. Er is geen Xcode nodig en geen appdata-map: de speler bewaart geen servergegevens op schijf.
+Open `http://server-ip:7780` in Safari voor LAN-gebruik zonder login. Via Deel > Zet op beginscherm kun je de speler als webapp openen. Start audio met de afspeelknop. Voor toegang buitenshuis stel je eerst de login en HTTPS in volgens [de installatiehandleiding](docs/remote-access.md).
 
 Image: `ghcr.io/nelisvanwijk/wave-iphone:latest` (amd64 en arm64).
 
@@ -22,13 +22,13 @@ Image: `ghcr.io/nelisvanwijk/wave-iphone:latest` (amd64 en arm64).
 
 **Adres van de speler:** een domein kan via je reverse proxy naar spelerpoort 7780 wijzen. Alle API-, hoes- en streamverzoeken gebruiken hetzelfde adres als de speler; er staat geen vast serveradres in de frontend. Zet buffering voor de audiostream uit en gebruik een ruime proxytimeout. Het upstreamadres kan intern HTTP blijven terwijl de speler extern HTTPS gebruikt.
 
-HTTP werkt voor de speler op het LAN. HTTPS is nodig voor de service worker en de optionele interfacecache; audio en API-antwoorden worden niet gecachet. De speler heeft geen eigen login en ondersteunt geen besloten SUB/WAVE-zender met wachtwoord. Houd hiermee rekening bij externe bereikbaarheid.
+De optionele login gebruikt een wachtwoord, een Secure/HttpOnly-cookie en sessieopslag op de server. Je blijft maximaal 90 dagen ingelogd; na 30 dagen zonder gebruik vervalt de sessie. Sessies overleven containerupdates via `/data`. Uitloggen en alle apparaten uitloggen staan in de instellingen. Een wachtwoordwijziging trekt bij herstart alle sessies in. HTTPS is verplicht voor login; stel die in voordat je de speler extern bereikbaar maakt. Het upstream SUB/WAVE-zenderwachtwoord wordt niet ondersteund.
 
 ## Updates
 
 Werk de speler bij via **Check for Updates / Update** in Unraid. GitHub Actions test wijzigingen en publiceert de Docker-image bij een push naar `main`. SUB/WAVE zelf blijft via de oorspronkelijke container te updaten. Een incompatibele verandering in de upstream-API kan een spelerupdate vereisen.
 
-Heropen de webapp na een update. Ontwikkelaars moeten bij wijzigingen aan de gecachete interface ook de cachenaam in `public/sw.js` verhogen.
+Heropen de webapp na een update. Vanaf 1.1.0 worden oude offline-interfacecaches verwijderd; de speler gebruikt het netwerk zodat de login ook na uitloggen wordt gehandhaafd.
 
 ## Afspelen en achtergrondgedrag
 
@@ -63,7 +63,7 @@ node server.mjs
 
 Compose: stel `SUBWAVE_URL` in je omgeving of een lokale `.env` in en voer `docker compose up -d` uit. Zelf bouwen: `docker build -t wave-iphone:local .`.
 
-De server staat alleen de noodzakelijke leesroutes toe: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.mp3`. Geen admin- of schrijf-API, buffering of transcoding.
+De server geeft alleen de noodzakelijke SUB/WAVE-leesroutes door: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.mp3`. Geen upstream admin- of schrijf-API, buffering of transcoding. Eigen `/auth/*`-routes regelen login en uitloggen.
 
 ## Verificatie
 

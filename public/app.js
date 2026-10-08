@@ -121,6 +121,7 @@ function renderHistory() {
 }
 async function getJSON(path, signal) {
   const response = await fetch(path, { signal, cache: 'no-store' });
+  if (response.status === 401) { stopPlayback(); location.replace('/login'); throw new Error('Login required'); }
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -266,4 +267,20 @@ if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
   $('airplay').addEventListener('click', () => audio.webkitShowPlaybackTargetPicker());
 }
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(() => {});
+fetch('/auth/status', { cache: 'no-store' }).then(r => r.json()).then(session => {
+  $('account-controls').hidden = !session.enabled;
+  if (session.enabled && !session.authenticated) { stopPlayback(); location.replace('/login'); }
+}).catch(() => {});
+for (const [id, endpoint] of [['logout', '/auth/logout'], ['logout-all', '/auth/logout-all']]) {
+  $(id).addEventListener('click', async () => {
+    if (id === 'logout-all' && !confirm('Alle apparaten uitloggen? Je moet daarna overal opnieuw inloggen.')) return;
+    $(id).disabled = true;
+    try {
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (!response.ok && response.status !== 401) throw new Error('Logout failed');
+      stopPlayback(); location.replace('/login');
+    } catch { $('connection-info').textContent = 'Uitloggen mislukt. Probeer opnieuw.'; }
+    finally { $(id).disabled = false; }
+  });
+}
 updateTransport(); refresh(true);
