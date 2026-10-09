@@ -4,12 +4,12 @@ import http from 'node:http';
 import { once } from 'node:events';
 import { createServer } from '../server.mjs';
 
-test('proxy serves MP3 unchanged, limits routes and cancels disconnected streams', async t => {
+for (const [format, mime] of [['mp3', 'audio/mpeg'], ['flac', 'application/ogg']]) test(`proxy serves ${format} unchanged, limits routes and cancels disconnected streams`, async t => {
   let closed = false, upstreamCalls = 0;
   const upstream = http.createServer((req, res) => {
     upstreamCalls++;
-    if (req.url === '/stream.mp3') {
-      res.writeHead(200, { 'Content-Type': 'audio/mpeg' }); res.write('MP3-test-bytes');
+    if (req.url === `/stream.${format}`) {
+      res.writeHead(200, { 'Content-Type': mime }); res.write(`${format}-test-bytes`);
       res.on('close', () => { closed = true; });
     } else res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"nowPlaying":{"title":"test"}}');
   });
@@ -25,11 +25,11 @@ test('proxy serves MP3 unchanged, limits routes and cancels disconnected streams
   assert.equal(upstreamCalls, 0);
   assert.equal((await (await fetch(`${base}/api/now-playing`)).json()).nowPlaying.title, 'test');
   const abort = new AbortController();
-  const stream = await fetch(`${base}/stream.mp3`, { signal: abort.signal });
-  assert.equal(stream.headers.get('content-type'), 'audio/mpeg');
+  const stream = await fetch(`${base}/stream.${format}`, { signal: abort.signal });
+  assert.equal(stream.headers.get('content-type'), mime);
   assert.equal(stream.headers.get('cache-control'), 'no-store');
   const reader = stream.body.getReader();
-  assert.equal(new TextDecoder().decode((await reader.read()).value), 'MP3-test-bytes');
+  assert.equal(new TextDecoder().decode((await reader.read()).value), `${format}-test-bytes`);
   await reader.cancel(); abort.abort();
   for (let i = 0; i < 20 && !closed; i++) await new Promise(resolve => setTimeout(resolve, 10));
   assert.equal(closed, true);

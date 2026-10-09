@@ -1,9 +1,11 @@
-import { FeedPoller, identity, audibleTime, trackPosition } from './player.js';
+import { FeedPoller, identity, audibleTime, trackPosition, desktopAudioChoice } from './player.js';
 
 const $ = id => document.getElementById(id);
 const audio = $('audio');
 const settings = $('settings');
-const format = 'mp3';
+const desktopAudio = desktopAudioChoice(navigator);
+let format = 'mp3';
+try { if (desktopAudio && localStorage.getItem('wave-audio-format') === 'flac') format = 'flac'; } catch { /* Storage is optional. */ }
 let wantsPlayback = false;
 let retryCount = 0;
 let retryTimer;
@@ -19,6 +21,7 @@ let generation = 0;
 let artworkKey = '';
 let metadataKey = '';
 let historyKey = '';
+let upcomingKey = '';
 let positionUpdatedAt = 0;
 
 function updateSystemPosition(force = false) {
@@ -40,6 +43,8 @@ function updateTransport() {
   $('play-symbol').setAttribute('href', wantsPlayback ? '#i-pause' : '#i-play');
   $('play').setAttribute('aria-label', wantsPlayback ? 'Radio pauzeren' : 'Radio afspelen');
   $('quality-label').textContent = format.toUpperCase();
+  $('quality-label').parentElement.setAttribute('aria-label', `${format.toUpperCase()} radiostream`);
+  $('stream-note').textContent = `Je luistert naar de live ${format.toUpperCase()}-radiostream. Pauzeren en hervatten brengt je terug naar de live-uitzending.`;
 }
 function setMetadata(force = false) {
   if (!('mediaSession' in navigator)) return;
@@ -119,6 +124,34 @@ function renderHistory() {
     row.append(img, copy, stamp); $('history-list').append(row);
   }
 }
+function renderUpcoming() {
+  const tracks = Array.isArray(lastState?.upcoming) ? lastState.upcoming.filter(track => track && typeof track.title === 'string') : [];
+  const key = JSON.stringify(tracks);
+  if (key === upcomingKey) return;
+  upcomingKey = key;
+  const list = $('upcoming-list');
+  list.replaceChildren();
+  if (!tracks.length) {
+    const empty = document.createElement('li'); empty.className = 'empty';
+    empty.textContent = 'De dj kiest het volgende nummer.'; list.append(empty); return;
+  }
+  // Preserve the station's complete queue, including repeated requests.
+  for (const [index, track] of tracks.entries()) {
+    const row = document.createElement('li'); row.className = 'history-row';
+    const img = document.createElement('img'); img.src = coverFor(track); img.alt = ''; img.loading = 'lazy';
+    img.addEventListener('error', () => { if (!img.src.endsWith('/cover.svg')) img.src = '/cover.svg'; });
+    const copy = document.createElement('div'); copy.className = 'history-copy';
+    const title = document.createElement('strong'); title.textContent = track.title;
+    const artist = document.createElement('span'); artist.textContent = track.artist || 'Onbekende artiest';
+    copy.append(title, artist);
+    if (typeof track.requestedBy === 'string' && track.requestedBy.trim()) {
+      const requester = document.createElement('span'); requester.className = 'requester';
+      requester.textContent = `Aangevraagd door ${track.requestedBy.trim()}`; copy.append(requester);
+    }
+    const position = document.createElement('span'); position.className = 'queue-position'; position.textContent = String(index + 1); position.setAttribute('aria-hidden', 'true');
+    row.append(img, copy, position); list.append(row);
+  }
+}
 async function getJSON(path, signal) {
   const response = await fetch(path, { signal, cache: 'no-store' });
   if (response.status === 401) { stopPlayback(); location.replace('/login'); throw new Error('Login required'); }
@@ -129,7 +162,7 @@ async function poll(signal) {
   // Session and DJ logs are not required for lock-screen metadata.
   // An unavailable history endpoint must not suppress the current track.
   const statePromise = getJSON('/api/state', AbortSignal.any([signal, AbortSignal.timeout(3500)])).then(state => {
-    if (!signal.aborted) { lastState = state; renderHistory(); }
+    if (!signal.aborted) { lastState = state; renderHistory(); renderUpcoming(); }
     return state;
   }).catch(() => null);
   try {
@@ -197,7 +230,7 @@ function startPlayback(retrying = false) {
   }, 20000);
   result?.catch(error => {
     if (thisGeneration !== generation || !wantsPlayback) return;
-    if (error.name === 'NotSupportedError') failPlayback('Deze browser kan de MP3-stream niet afspelen.');
+    if (error.name === 'NotSupportedError') failPlayback(`Deze browser kan de ${format.toUpperCase()}-stream niet afspelen.${format === 'flac' ? ' Kies MP3 in de instellingen.' : ''}`);
     else if (error.name === 'NotAllowedError') failPlayback('Tik opnieuw op afspelen om de radio te starten.');
     else if (error.name !== 'AbortError') reconnect();
   });
@@ -207,7 +240,7 @@ $('play').addEventListener('click', () => wantsPlayback ? stopPlayback() : start
 audio.addEventListener('playing', () => {
   if (!wantsPlayback) return;
   cancelTimers(); retryCount = 0;
-  status('MP3 · live verbonden');
+  status(`${format.toUpperCase()} · live verbonden`);
   notice(); setMetadata(true); configureRadioControls(); refresh(true);
 });
 audio.addEventListener('pause', () => {
@@ -227,7 +260,7 @@ audio.addEventListener('stalled', () => {
 audio.addEventListener('ended', reconnect);
 audio.addEventListener('error', () => {
   if (!wantsPlayback) return;
-  if ([3, 4].includes(audio.error?.code)) failPlayback('MP3 wordt niet goed afgespeeld. Probeer opnieuw.');
+  if ([3, 4].includes(audio.error?.code)) failPlayback(`${format.toUpperCase()} wordt niet goed afgespeeld.${format === 'flac' ? ' Kies MP3 in de instellingen.' : ' Probeer opnieuw.'}`);
   else reconnect();
 });
 audio.addEventListener('timeupdate', () => { updateSystemPosition(); refresh(); });
@@ -253,6 +286,18 @@ setInterval(() => {
   if (feedFailed && lastSuccess && Date.now() - lastSuccess > 20000) $('connection-info').textContent = 'Titel en hoes zijn mogelijk verouderd';
 }, 1000);
 
+$('audio-quality').hidden = !desktopAudio;
+for (const option of document.querySelectorAll('input[name="audio-format"]')) {
+  option.checked = option.value === format;
+  option.addEventListener('change', () => {
+    if (!desktopAudio || !option.checked) return;
+    const playing = wantsPlayback;
+    format = option.value === 'flac' ? 'flac' : 'mp3';
+    try { localStorage.setItem('wave-audio-format', format); } catch { /* Storage is optional. */ }
+    updateTransport(); notice();
+    if (playing) startPlayback();
+  });
+}
 function openSettings() { settings.showModal(); }
 $('settings-button').addEventListener('click', openSettings);
 $('close-settings').addEventListener('click', () => settings.close());

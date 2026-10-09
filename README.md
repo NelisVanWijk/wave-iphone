@@ -42,7 +42,9 @@ Heropen de webapp na een update. Vanaf 1.1.0 worden oude offline-interfacecaches
 
 **iOS kan JavaScript op de achtergrond opschorten. Deze PWA garandeert daarom geen titel- en hoesupdates bij een vergrendelde iPhone.** De app vermijdt het bewust stoppen van polling bij een verborgen pagina, maar kan de beperkingen van iOS niet opheffen. Fysieke iPhone-tests blijven nodig, met name op bètaversies.
 
-FLAC is verwijderd: op de geteste iPhone werkte audio wel, maar ontbraken de systeemmediaknoppen. MP3 ondersteunt daar wel titel, hoes en nummerpositie.
+Op desktop kun je bij Instellingen > Geluidskwaliteit kiezen tussen MP3 en FLAC. De keuze wordt per browser onthouden; wisselen tijdens het luisteren verbindt met de andere live stream. De browser moet de Ogg/FLAC-stream van SUB/WAVE ondersteunen. Op iPhone en iPad blijft MP3 actief vanwege de systeemmediabediening.
+
+De lijst **Hierna** toont de volledige `upcoming`-wachtrij van SUB/WAVE, in zender-volgorde. Bij een verzoeknummer verschijnt de meegestuurde `requestedBy`-naam. Een lege wachtrij betekent dat de dj het volgende nummer nog kiest.
 
 ## Lokaal ontwikkelen
 
@@ -63,7 +65,7 @@ node server.mjs
 
 Compose: stel `SUBWAVE_URL` in je omgeving of een lokale `.env` in en voer `docker compose up -d` uit. Zelf bouwen: `docker build -t wave-iphone:local .`.
 
-De server geeft alleen de noodzakelijke SUB/WAVE-leesroutes door: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.mp3`. Geen upstream admin- of schrijf-API, buffering of transcoding. Eigen `/auth/*`-routes regelen login en uitloggen.
+De server geeft de noodzakelijke SUB/WAVE-leesroutes door: `/api/now-playing`, `/api/state`, `/api/cover/:id`, `/stream.mp3` en `/stream.flac`. Daarnaast ondersteunt hij luisterverzoeken via `POST /api/request` en status via `GET /api/request/:id`. Geen upstream admin-API, buffering of transcoding. Eigen `/auth/*`-routes regelen login en uitloggen.
 
 ## Verificatie
 

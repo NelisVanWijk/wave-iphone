@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FeedPoller, audibleTime, identity, trackPosition } from '../public/player.js';
+import { FeedPoller, audibleTime, identity, trackPosition, desktopAudioChoice } from '../public/player.js';
+
+test('desktop quality choice excludes iOS desktop mode and mobile devices', () => {
+  assert.equal(desktopAudioChoice({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 10 }), true);
+  assert.equal(desktopAudioChoice({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)', platform: 'MacIntel', maxTouchPoints: 0 }), true);
+  assert.equal(desktopAudioChoice({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)', platform: 'MacIntel', maxTouchPoints: 5 }), false);
+  assert.equal(desktopAudioChoice({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0)' }), false);
+  assert.equal(desktopAudioChoice({ userAgent: 'Mozilla/5.0 (Linux; Android 15)', platform: 'Linux' }), false);
+});
 
 test('joining radio mid-song publishes song position rather than connection time', () => {
   const start = Date.parse('2026-09-25T12:00:00Z');

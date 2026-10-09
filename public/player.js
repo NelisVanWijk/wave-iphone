@@ -1,3 +1,10 @@
+export function desktopAudioChoice({ userAgent = '', platform = '', maxTouchPoints = 0, userAgentData } = {}) {
+  // iPadOS can advertise itself as a Mac, including in desktop-site mode.
+  if (/iPhone|iPad|iPod|Android|Mobile/i.test(userAgent) || userAgentData?.mobile) return false;
+  if (/Mac/i.test(platform) && maxTouchPoints > 1) return false;
+  return /Windows|Macintosh|MacIntel|Linux|CrOS/i.test(`${userAgent} ${platform}`);
+}
+
 export function identity(track) {
   return track ? `${track.subsonic_id || ''}|${track.title || ''}|${track.artist || ''}` : '';
 }

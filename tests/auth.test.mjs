@@ -43,7 +43,7 @@ test('login protects page, API, cover and stream and sets a persistent secure co
   const f = await fixture(t);
   assert.equal((await f.get('/')).status, 303);
   assert.equal((await f.get('/login')).status, 200);
-  for (const url of ['/api/now-playing', '/api/state', '/api/cover/one', '/stream.mp3', '/app.js']) assert.equal((await f.get(url)).status, 401);
+  for (const url of ['/api/now-playing', '/api/state', '/api/cover/one', '/stream.mp3', '/stream.flac', '/app.js']) assert.equal((await f.get(url)).status, 401);
   assert.equal((await f.post('/auth/login', { password: 'wrong' })).status, 401);
   assert.equal((await f.post('/auth/login', { password: secret }, null, 'https://evil.example')).status, 403);
   const response = await f.post('/auth/login', { password: secret });
