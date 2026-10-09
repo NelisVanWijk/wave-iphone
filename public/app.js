@@ -1,4 +1,4 @@
-import { FeedPoller, identity, audibleTime, trackPosition, desktopAudioChoice } from './player.js';
+import { FeedPoller, identity, audibleTime, trackPosition, desktopAudioChoice } from './player.js?v=1.3.1';
 
 const $ = id => document.getElementById(id);
 const audio = $('audio');
@@ -99,7 +99,7 @@ function renderHistory() {
   // The controller already orders history most-recent-first.
   const rows = (Array.isArray(lastState.history) ? lastState.history : []).filter(track => {
     const key = identity(track);
-    if (!track.title || seen.has(key)) return false;
+    if (!track?.title || seen.has(key)) return false;
     seen.add(key); return true;
   }).slice(0, 4);
   const nextKey = JSON.stringify(rows);
@@ -128,12 +128,11 @@ function renderUpcoming() {
   const tracks = Array.isArray(lastState?.upcoming) ? lastState.upcoming.filter(track => track && typeof track.title === 'string') : [];
   const key = JSON.stringify(tracks);
   if (key === upcomingKey) return;
-  upcomingKey = key;
   const list = $('upcoming-list');
-  list.replaceChildren();
+  const fragment = document.createDocumentFragment();
   if (!tracks.length) {
     const empty = document.createElement('li'); empty.className = 'empty';
-    empty.textContent = 'De dj kiest het volgende nummer.'; list.append(empty); return;
+    empty.textContent = 'De dj kiest het volgende nummer.'; fragment.append(empty);
   }
   // Preserve the station's complete queue, including repeated requests.
   for (const [index, track] of tracks.entries()) {
@@ -149,8 +148,17 @@ function renderUpcoming() {
       requester.textContent = `Aangevraagd door ${track.requestedBy.trim()}`; copy.append(requester);
     }
     const position = document.createElement('span'); position.className = 'queue-position'; position.textContent = String(index + 1); position.setAttribute('aria-hidden', 'true');
-    row.append(img, copy, position); list.append(row);
+    row.append(img, copy, position); fragment.append(row);
   }
+  list.replaceChildren(fragment);
+  upcomingKey = key;
+}
+function renderUpcomingError() {
+  // Reset the comparison too: the same queue must reappear after recovery.
+  upcomingKey = '';
+  const empty = document.createElement('li'); empty.className = 'empty';
+  empty.textContent = 'De wachtrij is tijdelijk niet bereikbaar. We proberen het opnieuw.';
+  $('upcoming-list').replaceChildren(empty);
 }
 async function getJSON(path, signal) {
   const response = await fetch(path, { signal, cache: 'no-store' });
@@ -162,9 +170,18 @@ async function poll(signal) {
   // Session and DJ logs are not required for lock-screen metadata.
   // An unavailable history endpoint must not suppress the current track.
   const statePromise = getJSON('/api/state', AbortSignal.any([signal, AbortSignal.timeout(3500)])).then(state => {
-    if (!signal.aborted) { lastState = state; renderHistory(); renderUpcoming(); }
+    if (!Array.isArray(state?.upcoming)) throw new Error('Unexpected queue response');
+    if (!signal.aborted) { lastState = state; renderUpcoming(); }
     return state;
-  }).catch(() => null);
+  }).catch(error => {
+    renderUpcomingError();
+    console.warn('Wachtrij ophalen mislukt:', error.message);
+    return null;
+  });
+  // History rendering must never prevent the queue from updating.
+  void statePromise.then(state => { if (state && !signal.aborted) renderHistory(); }).catch(error => {
+    console.warn('Geschiedenis weergeven mislukt:', error.message);
+  });
   try {
     const response = await getJSON('/api/now-playing', signal);
     if (!Object.hasOwn(response, 'nowPlaying')) throw new Error('Unexpected station response');

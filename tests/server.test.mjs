@@ -2,7 +2,44 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { once } from 'node:events';
+import { readFile } from 'node:fs/promises';
 import { createServer } from '../server.mjs';
+
+test('page and module dependencies use the release version to bypass old app assets', async t => {
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const server = createServer('http://127.0.0.1:1');
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const html = await (await fetch(base)).text();
+  assert.ok(html.includes(`src="/app.js?v=${version}"`));
+  assert.ok(html.includes(`href="/style.css?v=${version}"`));
+  const app = await fetch(`${base}/app.js?v=${version}`);
+  assert.equal(app.status, 200);
+  assert.ok((await app.text()).includes(`'./player.js?v=${version}'`));
+  assert.equal((await fetch(`${base}/player.js?v=${version}`)).status, 200);
+  assert.equal((await fetch(`${base}/style.css?v=${version}`)).status, 200);
+});
+
+test('station state preserves the whole ordered queue and requester names', async t => {
+  const state = { current: null, upcoming: [
+    { title: 'Next song', artist: 'Artist', requestedBy: null },
+    { title: 'Request song', artist: 'Artist', requestedBy: 'Sam' },
+    { title: 'Request song', artist: 'Artist', requestedBy: 'Alex' },
+  ], history: [null] };
+  const upstream = http.createServer((req, res) => {
+    assert.equal(req.url, '/api/state');
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(state));
+  });
+  upstream.listen(0, '127.0.0.1'); await once(upstream, 'listening');
+  const server = createServer(`http://127.0.0.1:${upstream.address().port}`);
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { server.closeAllConnections(); upstream.closeAllConnections(); server.close(); upstream.close(); });
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/state`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await response.json(), state);
+});
 
 for (const [format, mime] of [['mp3', 'audio/mpeg'], ['flac', 'application/ogg']]) test(`proxy serves ${format} unchanged, limits routes and cancels disconnected streams`, async t => {
   let closed = false, upstreamCalls = 0;
